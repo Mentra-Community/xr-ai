@@ -60,6 +60,15 @@ struct LiveKitBackendTestAccess {
     static bool TearDownInProgress(const LiveKitBackend& backend) {
         return backend.teardown_in_progress_.load();
     }
+
+    static std::uint64_t ByteStreamEpoch(const LiveKitBackend& backend) {
+        return backend.byte_stream_epoch_.load();
+    }
+
+    static void ApplyConnectionState(LiveKitBackend& backend,
+                                     ConnectionState state) {
+        backend.ApplyConnectionState(state);
+    }
 };
 
 } // namespace streamkit
@@ -261,6 +270,22 @@ int main() {
         streamkit::LiveKitBackendTestAccess::ConnectionEpoch(stale_backend));
     ExpectEq(delivered_metrics, 1);
     stale_backend.Disconnect();
+
+    // An SDK-managed reconnect invalidates the epoch captured by an active
+    // byte stream even if the room becomes connected again before its next
+    // chunk or close check.
+    streamkit::LiveKitBackend reconnecting_backend{lk};
+    reconnecting_backend.Connect(streamkit::SessionConfig::Default());
+    const auto active_byte_stream_epoch =
+        streamkit::LiveKitBackendTestAccess::ByteStreamEpoch(reconnecting_backend);
+    streamkit::LiveKitBackendTestAccess::ApplyConnectionState(
+        reconnecting_backend, ConnectionState::kReconnecting);
+    streamkit::LiveKitBackendTestAccess::ApplyConnectionState(
+        reconnecting_backend, ConnectionState::kConnected);
+    Expect(
+        streamkit::LiveKitBackendTestAccess::ByteStreamEpoch(reconnecting_backend) !=
+        active_byte_stream_epoch);
+    reconnecting_backend.Disconnect();
 
     // User callback exceptions are contained at the delivery boundary and do
     // not terminate the telemetry worker.

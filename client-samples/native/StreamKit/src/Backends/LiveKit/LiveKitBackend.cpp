@@ -612,6 +612,7 @@ FileTransferInfo LiveKitBackend::SendBytes(
     const auto effective = MakeFileOptions(options, data.size());
     std::shared_ptr<livekit::Room> active_room;
     std::uint64_t generation;
+    std::uint64_t byte_stream_epoch;
     {
         std::scoped_lock lock(teardown_mutex_);
         if (!is_connected_.load()
@@ -623,6 +624,7 @@ FileTransferInfo LiveKitBackend::SendBytes(
         }
         active_room = room_;
         generation = connect_generation_.load();
+        byte_stream_epoch = byte_stream_epoch_.load();
     }
     const auto destinations =
         config_.hub_identity.has_value() && !config_.hub_identity->empty()
@@ -638,10 +640,11 @@ FileTransferInfo LiveKitBackend::SendBytes(
     };
     const detail::ByteStreamConnection connection{
         .room = active_room,
-        .is_active = [this, active_room, generation]() {
+        .is_active = [this, active_room, generation, byte_stream_epoch]() {
             std::scoped_lock lock(teardown_mutex_);
             return is_connected_.load() && room_ == active_room &&
-                   connect_generation_.load() == generation;
+                   connect_generation_.load() == generation &&
+                   byte_stream_epoch_.load() == byte_stream_epoch;
         },
     };
     std::string stream_id;
@@ -666,6 +669,7 @@ FileTransferInfo LiveKitBackend::SendFile(
     const auto effective = MakeFileOptions(options, size, path.filename().string());
     std::shared_ptr<livekit::Room> active_room;
     std::uint64_t generation;
+    std::uint64_t byte_stream_epoch;
     {
         std::scoped_lock lock(teardown_mutex_);
         if (!is_connected_.load()
@@ -677,6 +681,7 @@ FileTransferInfo LiveKitBackend::SendFile(
         }
         active_room = room_;
         generation = connect_generation_.load();
+        byte_stream_epoch = byte_stream_epoch_.load();
     }
     const auto destinations =
         config_.hub_identity.has_value() && !config_.hub_identity->empty()
@@ -692,10 +697,11 @@ FileTransferInfo LiveKitBackend::SendFile(
     };
     const detail::ByteStreamConnection connection{
         .room = active_room,
-        .is_active = [this, active_room, generation]() {
+        .is_active = [this, active_room, generation, byte_stream_epoch]() {
             std::scoped_lock lock(teardown_mutex_);
             return is_connected_.load() && room_ == active_room &&
-                   connect_generation_.load() == generation;
+                   connect_generation_.load() == generation &&
+                   byte_stream_epoch_.load() == byte_stream_epoch;
         },
     };
     std::string stream_id;
@@ -764,6 +770,7 @@ void LiveKitBackend::BlockNetworkMetricsDelivery() {
     const auto delivery = network_metrics_.delivery;
     std::scoped_lock lock(delivery->mutex);
     is_connected_.store(false);
+    byte_stream_epoch_.fetch_add(1);
     network_metrics_.connection_epoch.fetch_add(1);
     delivery->blocked = true;
 }
