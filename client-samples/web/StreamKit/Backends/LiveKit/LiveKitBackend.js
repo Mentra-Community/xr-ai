@@ -563,8 +563,6 @@ export class LiveKitBackend {
   }
 
   async sendBytes(data, options) {
-    const room = this.#room;
-    if (!room || room.state !== 'connected') throw StreamError.notConnected();
     const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
     const transfer = fileStreamOptions(
       options,
@@ -573,6 +571,8 @@ export class LiveKitBackend {
       'application/octet-stream',
       this.#config.hubIdentity,
     );
+    const room = this.#room;
+    if (!room || room.state !== 'connected') throw StreamError.notConnected();
     let id;
     try {
       id = await this.#byteStreamWriter.sendBytes(bytes, transfer.liveKitOptions);
@@ -592,8 +592,6 @@ export class LiveKitBackend {
   }
 
   async sendFile(file, options) {
-    const room = this.#room;
-    if (!room || room.state !== 'connected') throw StreamError.notConnected();
     if (!(file instanceof File)) throw new TypeError('file must be a File');
     const transfer = fileStreamOptions(
       options,
@@ -602,6 +600,8 @@ export class LiveKitBackend {
       file.type,
       this.#config.hubIdentity,
     );
+    const room = this.#room;
+    if (!room || room.state !== 'connected') throw StreamError.notConnected();
     let id;
     try {
       id = await this.#byteStreamWriter.sendFile(file, transfer.liveKitOptions);

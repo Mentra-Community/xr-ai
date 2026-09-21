@@ -74,7 +74,7 @@ struct LiveKitConfig {
     std::optional<std::string> token_url;
 
     /// Hub participant identity used for client-to-agent routing. Set nullopt
-    /// only for legacy rooms that intentionally broadcast participant data.
+    /// to broadcast participant data to the room.
     std::optional<std::string> hub_identity = "xr-hub-connector";
 };
 
