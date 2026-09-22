@@ -565,6 +565,7 @@ export async function sendCustom(model, text, showError) {
  *   startAudio:  () => void,
  *   stopAudio:   () => void,
  *   startCamera: () => void,
+ *   toggleCamera?: () => void,
  *   stopCamera:  () => void,
  *   sendCustom:  (text: string) => void,
  * }} actions
@@ -607,7 +608,8 @@ export function wireBaseEvents(model, actions) {
   });
 
   $('camera-btn').addEventListener('click', () => {
-    if (model.isCameraActive) stopCamera(); else startCamera();
+    if (actions.toggleCamera) actions.toggleCamera();
+    else if (model.isCameraActive) stopCamera(); else startCamera();
   });
 
   const msgInput = $('message-input');

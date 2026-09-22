@@ -1,0 +1,39 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# The launcher materializes these paths for runtime path resolution.
+models_config: models.json
+workflow_config: ../../../agent-samples/tea-making-sample/yaml/workflow.yaml
+voice_gate_yaml: voice_gate.yaml
+
+# Choose one to replace the idle and explicit background-action instructions.
+# Active tea guidance comes from the focused step policies in workflow.yaml.
+# foreground_prompt: <inline shared foreground instructions>
+# foreground_prompt_file: ../worker/tea_making_worker/prompts/foreground_prompt.txt
+
+rag_endpoint: tcp://127.0.0.1:8340
+artifacts_dir: ../artifacts
+
+web_events_host: 127.0.0.1
+web_events_port: 8092
+web_events_max_events: 5000
+
+frame_max_age_s: 5.0
+frame_timeout_s: 5.0
+vlm_timeout_s: 60.0
+
+change_watch_interval_s: 2.0
+transcript_summary_interval_s: 120.0
+video_log_interval_s: 2.0
+background_history_size: 50
+
+change_watch_default_instruction: >-
+  important changes involving people, objects, actions, or possible hazards
+
+silero_threshold: 0.3
+silence_duration: 1.2
+min_speech: 0.15
+idle_timeout_secs: 0
+
+# Save the exact foreground camera frame with its question and answer for inspection.
+debug_frames_dir: ../artifacts/camera-debug

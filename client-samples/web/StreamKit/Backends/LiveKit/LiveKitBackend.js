@@ -89,14 +89,18 @@ export class LiveKitBackend {
   /** @type {import('livekit-client').LocalVideoTrack | null} */
   #videoTrack = null;
 
+  #cameraGeneration = 0;
+
   /** @type {import('livekit-client').LocalAudioTrack | null} */
   #audioTrack = null;
+  #audioGeneration = 0;
 
   /** @type {import('../../Config/SessionConfig.js').SessionConfig | null} */
   #sessionConfig = null;
 
   /** @type {Map<string, HTMLAudioElement>} sid → element, for cleanup on teardown */
   #audioElements = new Map();
+  #audioPlaybackMuted = false;
 
   /** @type {number | null} */
   #networkMetricsTimer = null;
@@ -271,6 +275,7 @@ export class LiveKitBackend {
       if (track.kind === Track.Kind.Audio) {
         const el = track.attach();
         el.id = `remote-audio-${track.sid}`;
+        el.muted = this.#audioPlaybackMuted;
         el.style.display = 'none';
         document.body.appendChild(el);
         this.#audioElements.set(track.sid, el);
@@ -320,8 +325,51 @@ export class LiveKitBackend {
 
     this.#resumeRemoteAudio(this.#room);
 
-    await this.stopAudio();
-    await this.#publishAudio(audioConfig ?? this.#sessionConfig?.audio);
+    const stopping = this.stopAudio();
+    const generation = this.#audioGeneration;
+    const room = this.#room;
+    await stopping;
+    await this.#publishAudio(audioConfig ?? this.#sessionConfig?.audio, room, generation);
+  }
+
+  /**
+   * Publish a clone of a caller-owned live audio track as the microphone.
+   * stopAudio() and disconnect() leave the original track alive.
+   * @param {MediaStreamTrack} track
+   * @returns {Promise<void>}
+   */
+  async publishMicrophoneTrack(track) {
+    const room = this.#room;
+    if (!room || room.state !== 'connected') throw StreamError.notConnected();
+    if (track?.kind !== 'audio' || track.readyState !== 'live') {
+      throw new TypeError('Microphone input must be a live audio track.');
+    }
+    this.#resumeRemoteAudio(room);
+    const stopping = this.stopAudio();
+    const generation = this.#audioGeneration;
+    await stopping;
+    await this.#publishAudioTrack(track.clone(), room, generation);
+  }
+
+  async #publishAudioTrack(track, room, generation) {
+    try {
+      if (room !== this.#room || generation !== this.#audioGeneration) {
+        throw new DOMException('Microphone stopped.', 'AbortError');
+      }
+      const publication = await room.localParticipant.publishTrack(track, {
+        source: Track.Source.Microphone,
+      });
+      const published = publication.audioTrack;
+      if (!published) throw new Error('LiveKit did not publish the microphone track');
+      if (room !== this.#room || generation !== this.#audioGeneration) {
+        await room.localParticipant.unpublishTrack(published).catch(() => {});
+        throw new DOMException('Microphone stopped.', 'AbortError');
+      }
+      this.#audioTrack = published;
+    } catch (error) {
+      track.stop();
+      throw error;
+    }
   }
 
   /**
@@ -332,6 +380,7 @@ export class LiveKitBackend {
    * @returns {Promise<void>}
    */
   async stopAudio() {
+    this.#audioGeneration += 1;
     const track = this.#audioTrack;
     if (!track) return;
     this.#audioTrack = null;
@@ -373,7 +422,10 @@ export class LiveKitBackend {
     }
 
     // Stop any previous video track first.
-    await this.stopCamera();
+    const stopping = this.stopCamera();
+    const generation = this.#cameraGeneration;
+    const room = this.#room;
+    await stopping;
 
     const config     = cameraConfig ?? this.#sessionConfig?.camera;
     const deviceId   = config?.deviceId ?? null;
@@ -394,12 +446,48 @@ export class LiveKitBackend {
       throw new Error('Camera capture returned no video track');
     }
 
+    await this.#publishCameraTrack(mediaTrack, room, generation);
+  }
+
+  /**
+   * Publish a clone of a caller-owned live video track as the camera.
+   * The original remains usable after stopCamera() or disconnect().
+   * Publish one layer and prefer lower frame rates over resizing the source.
+   * @param {MediaStreamTrack} track
+   * @returns {Promise<void>}
+   */
+  async publishCameraTrack(track) {
+    if (!this.#room || this.#room.state !== 'connected') {
+      throw StreamError.cameraRequiresConnection();
+    }
+    if (track?.kind !== 'video' || track.readyState !== 'live') {
+      throw new TypeError('Camera input must be a live video track.');
+    }
+    const stopping = this.stopCamera();
+    const generation = this.#cameraGeneration;
+    const room = this.#room;
+    await stopping;
+    await this.#publishCameraTrack(track.clone(), room, generation, {
+      simulcast: false,
+      degradationPreference: 'maintain-resolution',
+    });
+  }
+
+  async #publishCameraTrack(mediaTrack, room, generation, options = {}) {
     try {
-      const publication = await this.#room.localParticipant.publishTrack(mediaTrack, {
+      if (!room || room !== this.#room || generation !== this.#cameraGeneration) {
+        throw new DOMException('Camera stopped.', 'AbortError');
+      }
+      const publication = await room.localParticipant.publishTrack(mediaTrack, {
         source: Track.Source.Camera,
+        ...options,
       });
       const track = publication.videoTrack;
       if (!track) throw new Error('LiveKit did not publish the camera track');
+      if (room !== this.#room || generation !== this.#cameraGeneration) {
+        await room.localParticipant.unpublishTrack(track).catch(() => {});
+        throw new DOMException('Camera stopped.', 'AbortError');
+      }
       this.#videoTrack = track;
       console.info('LiveKitBackend: published camera settings', mediaTrack.getSettings());
     } catch (error) {
@@ -416,6 +504,7 @@ export class LiveKitBackend {
    * @returns {Promise<void>}
    */
   async stopCamera() {
+    this.#cameraGeneration += 1;
     const track = this.#videoTrack;
     if (!track) return;
     this.#videoTrack = null;
@@ -484,6 +573,12 @@ export class LiveKitBackend {
     await room.localParticipant.publishData(bytes, opts);
   }
 
+  /** Mute received audio without stopping microphone publication. */
+  setAudioPlaybackMuted(muted) {
+    this.#audioPlaybackMuted = Boolean(muted);
+    for (const el of this.#audioElements.values()) el.muted = this.#audioPlaybackMuted;
+  }
+
   // ── Private helpers ─────────────────────────────────────────────────────────
 
   /**
@@ -503,6 +598,8 @@ export class LiveKitBackend {
    * @returns {Promise<void>}
    */
   async #tearDown() {
+    this.#audioGeneration += 1;
+    this.#cameraGeneration += 1;
     this.#connectionGeneration += 1;
     this.#stopNetworkMetricsReporting();
     const room = this.#room;
@@ -609,7 +706,7 @@ export class LiveKitBackend {
    * @param {import('../../Config/SessionConfig.js').SessionConfig} sessionConfig
    * @returns {Promise<void>}
    */
-  async #publishAudio(audioConfig) {
+  async #publishAudio(audioConfig, room = this.#room, generation = this.#audioGeneration) {
     const { mode } = audioConfig ?? {};
 
     // Derive WebRTC constraint booleans from MicrophoneMode.
@@ -625,11 +722,7 @@ export class LiveKitBackend {
       autoGainControl:  isVoice || isSoftware,
     });
 
-    this.#audioTrack = track;
-
-    await this.#room.localParticipant.publishTrack(track, {
-      source: Track.Source.Microphone,
-    });
+    await this.#publishAudioTrack(track, room, generation);
   }
 
   /**

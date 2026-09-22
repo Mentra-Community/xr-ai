@@ -1,0 +1,83 @@
+{
+  "models": {
+    "vlm": {
+      "category": "vlm",
+      "adapter": {
+        "kind": "openai_compat",
+        "model_name": "llm",
+        "reasoning_field": "reasoning_content",
+        "capabilities": {
+          "streaming": true,
+          "vision": true
+        },
+        "default_extras": {
+          "max_tokens": 128,
+          "temperature": 0.0,
+          "chat_template_kwargs": {
+            "enable_thinking": false
+          }
+        }
+      },
+      "endpoint": {
+        "base_url": "http://127.0.0.1:18108",
+        "timeout": 90,
+        "readiness": "health"
+      }
+    },
+    "llm": {
+      "adapter": {
+        "preset": "nemotron_omni"
+      },
+      "endpoint": {
+        "base_url": "http://127.0.0.1:18108",
+        "timeout": 90,
+        "readiness": "health"
+      }
+    },
+    "embedding": {
+      "category": "embedding",
+      "adapter": {
+        "kind": "openai_compat",
+        "model_name": "nvidia/nemotron-3-embed-1b"
+      },
+      "endpoint": {
+        "base_url": "https://integrate.api.nvidia.com",
+        "api_key_env": "NGC_API_KEY",
+        "readiness": "none",
+        "timeout": 60
+      }
+    },
+    "stt": {
+      "category": "stt",
+      "adapter": {
+        "kind": "riva_grpc",
+        "function_id": "1598d209-5e27-4d3c-8079-4751568b1081",
+        "language": "en-US",
+        "use_ssl": true
+      },
+      "endpoint": {
+        "base_url": "grpc.nvcf.nvidia.com:443",
+        "api_key_env": "NGC_API_KEY",
+        "readiness": "none",
+        "timeout": 45
+      }
+    },
+    "tts": {
+      "category": "tts",
+      "adapter": {
+        "kind": "riva_grpc",
+        "function_id": "877104f7-e885-42b9-8de8-f6e4c6303969",
+        "language": "en-US",
+        "voice": "Magpie-Multilingual.EN-US.Aria",
+        "sample_rate": 44100,
+        "use_ssl": true
+      },
+      "endpoint": {
+        "base_url": "grpc.nvcf.nvidia.com:443",
+        "api_key_env": "NGC_API_KEY",
+        "readiness": "none",
+        "timeout": 45
+      }
+    }
+  }
+}

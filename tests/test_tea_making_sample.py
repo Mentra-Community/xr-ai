@@ -1404,12 +1404,13 @@ async def test_streaming_current_view_uses_question_and_times_out() -> None:
     foreground._vlm_timeout_s = 0.01
     tool = foreground._current_view_tool(
         "participant-timeout",
+        query="What number is on the display?",
         ctx=Context(),  # type: ignore[arg-type]
         timestamp_us=42,
     )
 
     result = await tool.handler(
-        CurrentViewRequest(question="What number is on the display?")
+        CurrentViewRequest(question="Describe the entire scene.")
     )
 
     assert result.available is False
@@ -2275,3 +2276,23 @@ def test_foreground_route_appends_policy_to_prompt_override(tmp_path: Path) -> N
     assert active_turn.route == "tea"
     assert not active_turn.agent.system_prompt.startswith("Explicit override")
     assert active_turn.agent.name == "foreground_tea_fill_water"
+
+
+def test_foreground_debug_frame_saves_exact_selected_bytes(tmp_path: Path) -> None:
+    from xr_ai_tools.current_frame import ImageFrame
+
+    images = ImageRegistry()
+    selected = b"selected-frame-jpeg"
+    ref = images.put(selected)
+    images.put(b"newer-frame-must-not-replace-selected-frame")
+    frame = ImageFrame(image=ref, width=960, height=540, timestamp_us=42,
+                       sequence=7, participant_id="test-client")
+    foreground = object.__new__(ForegroundAgent)
+    foreground._images = SimpleNamespace(images=images)
+    foreground._debug_frames_dir = tmp_path
+    metadata_path, metadata = foreground._save_debug_frame(frame, "Can you see my hand?", "reply-1")
+    assert (tmp_path / metadata["image_file"]).read_bytes() == selected
+    assert json.loads(metadata_path.read_text())["question"] == "Can you see my hand?"
+    assert metadata["timestamp_us"] == 42
+    assert metadata["response_id"] == "reply-1"
+    assert metadata["image"] == {"uri": ref.uri}

@@ -1,0 +1,10 @@
+model: nvidia/llama-nemotron-embed-1b-v2
+host: 127.0.0.1
+port: 8109
+served_model_name: embed
+model_cache: /workspace/models
+max_num_seqs: 8
+max_model_len: 8192
+gpu_memory_utilization: 0.08
+enforce_eager: true
+vllm_backend: pip

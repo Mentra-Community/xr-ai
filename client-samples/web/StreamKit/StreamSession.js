@@ -181,6 +181,19 @@ export class StreamSession {
     await this.#backend.startAudio(config);
   }
 
+  /** Publish a clone of a caller-owned live audio track as the microphone.
+   * @param {MediaStreamTrack} track
+   * @returns {Promise<void>}
+   */
+  async publishMicrophoneTrack(track) {
+    await this.#backend.publishMicrophoneTrack(track);
+  }
+
+  /** Mute received audio while keeping the microphone active. */
+  setAudioPlaybackMuted(muted) {
+    this.#backend.setAudioPlaybackMuted(muted);
+  }
+
   async stopAudio() {
     await this.#backend.stopAudio();
   }
@@ -195,6 +208,18 @@ export class StreamSession {
    */
   async startCamera(cameraConfig) {
     await this.#backend.startCamera(cameraConfig);
+  }
+
+  /**
+   * Publishes a clone of an existing live video track as this client's camera.
+   * The caller retains ownership of the original track and its source.
+   * `stopCamera()` and `disconnect()` release only the published clone.
+   *
+   * @param {MediaStreamTrack} track - A live video track, such as WHEP video.
+   * @returns {Promise<void>}
+   */
+  async publishCameraTrack(track) {
+    await this.#backend.publishCameraTrack(track);
   }
 
   /**

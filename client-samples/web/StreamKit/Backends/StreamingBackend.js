@@ -147,6 +147,17 @@
  */
 
 /**
+ * Publish a clone of a caller-owned live video track as the camera.
+ * Stop and disconnect release the clone without stopping the supplied source.
+ * Requires an established connection.
+ *
+ * @function
+ * @name StreamingBackend#publishCameraTrack
+ * @param {MediaStreamTrack} track
+ * @returns {Promise<void>}
+ */
+
+/**
  * Stop camera capture and remove the published video track.
  *
  * Must resolve silently if the camera was never started.
@@ -172,4 +183,22 @@
  *   `false` for low-latency best-effort delivery.
  * @returns {Promise<void>}
  * @throws {import('../StreamError.js').StreamError}
+ */
+
+/**
+ * Publish a clone of a caller-owned live audio track as the microphone.
+ * Stopping audio or disconnecting releases only the clone.
+ * @function
+ * @name StreamingBackend#publishMicrophoneTrack
+ * @param {MediaStreamTrack} track
+ * @returns {Promise<void>}
+ */
+
+/**
+ * Mute received audio without stopping microphone publication.
+ * Applies to existing and subsequently subscribed audio tracks.
+ * @function
+ * @name StreamingBackend#setAudioPlaybackMuted
+ * @param {boolean} muted
+ * @returns {void}
  */

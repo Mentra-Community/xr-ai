@@ -42,6 +42,8 @@ class WorkerConfig:
     web_events_host: str
     web_events_port: int
     web_events_max_events: int
+    debug_frames_dir: Path | None = None
+    """Opt-in directory for exact foreground VLM frames and question/answer metadata."""
 
 
 def _resolve(config_path: Path | None, raw: str) -> Path:
@@ -99,6 +101,7 @@ def load_config(path: Path | None) -> WorkerConfig:
     if web_events_max_events <= 0:
         raise ValueError("web_events_max_events must be positive")
     return WorkerConfig(
+        debug_frames_dir=_resolve(path, str(data["debug_frames_dir"])) if data.get("debug_frames_dir") else None,
         models_config=_resolve(path, str(data.get("models_config", "models.local.json"))),
         workflow_config=_resolve(path, str(data.get("workflow_config", "workflow.yaml"))),
         voice_gate_yaml=_resolve(path, str(data.get("voice_gate_yaml", "voice_gate.yaml"))),

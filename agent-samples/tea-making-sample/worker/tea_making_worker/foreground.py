@@ -11,6 +11,7 @@ import re
 from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
+from uuid import uuid4
 
 import nemo_relay
 from loguru import logger
@@ -135,6 +136,7 @@ class ForegroundAgent(Agent):
         video_log: VideoLogAgent,
         prompt: str,
         vlm_timeout_s: float = 15.0,
+        debug_frames_dir: Path | None = None,
     ) -> None:
         if vlm_timeout_s <= 0:
             raise ValueError("vlm_timeout_s must be positive")
@@ -160,6 +162,7 @@ class ForegroundAgent(Agent):
         )
         self._tea_agents = _build_tea_agents(guidance.workflow)
         self._vlm_timeout_s = vlm_timeout_s
+        self._debug_frames_dir = debug_frames_dir
         self._tasks: dict[str, asyncio.Task[None]] = {}
 
     @subscribe(USER_QUERY_TOPIC)
@@ -359,6 +362,7 @@ class ForegroundAgent(Agent):
         if session is None or not session.active or session.step_id is None:
             tools = self._root_tools(
                 participant_id,
+                query=query,
                 ctx=ctx,
                 timestamp_us=timestamp_us,
             )
@@ -402,11 +406,13 @@ class ForegroundAgent(Agent):
         self,
         participant_id: str,
         *,
+        query: str,
         ctx: RuntimeContext | None,
         timestamp_us: int | None,
     ) -> ToolSet:
         current_view = self._current_view_tool(
             participant_id,
+            query=query,
             ctx=ctx,
             timestamp_us=timestamp_us,
         )
@@ -420,14 +426,15 @@ class ForegroundAgent(Agent):
         self,
         participant_id: str,
         *,
+        query: str,
         ctx: RuntimeContext | None,
         timestamp_us: int | None,
     ) -> Tool[CurrentViewRequest, ImageQueryResult]:
-        async def inspect(request: CurrentViewRequest) -> ImageQueryResult:
+        async def inspect(_request: CurrentViewRequest) -> ImageQueryResult:
             if ctx is None:
                 raise RuntimeError("current-view streaming requires a runtime context")
             return await self._stream_current_view(
-                request.question,
+                query,
                 participant_id,
                 ctx,
                 timestamp_us=timestamp_us,
@@ -457,6 +464,8 @@ class ForegroundAgent(Agent):
         opened = False
         cancelled = False
         chunks: list[str] = []
+        debug_file = None
+        debug_metadata = None
         try:
             async with asyncio.timeout(self._vlm_timeout_s):
                 try:
@@ -479,6 +488,13 @@ class ForegroundAgent(Agent):
                     )
                     opened = True
                     return ImageQueryResult(text=unavailable, available=False)
+                if getattr(self, "_debug_frames_dir", None) is not None:
+                    try:
+                        debug_file, debug_metadata = await asyncio.to_thread(
+                            self._save_debug_frame, frame, query, response_id
+                        )
+                    except Exception:
+                        logger.exception("Could not save diagnostic camera frame")
                 stream = self._vision.stream(
                     ImageQueryRequest(image=frame.image, query=query)
                 )
@@ -541,6 +557,12 @@ class ForegroundAgent(Agent):
             cancelled = True
             raise
         finally:
+            if debug_file is not None:
+                debug_metadata.update(response="".join(chunks), cancelled=cancelled)
+                try:
+                    await asyncio.to_thread(debug_file.write_text, json.dumps(debug_metadata, indent=2))
+                except Exception:
+                    logger.exception("Could not save diagnostic camera response")
             if opened and not cancelled:
                 with suppress(RuntimeClosedError):
                     await ctx.publish(
@@ -550,6 +572,23 @@ class ForegroundAgent(Agent):
                             timestamp_us=timestamp_us,
                         ),
                     )
+
+    def _save_debug_frame(self, frame, query: str, response_id: str):
+        directory = self._debug_frames_dir
+        directory.mkdir(parents=True, exist_ok=True)
+        stem = f"{frame.timestamp_us}-{uuid4().hex}"
+        # Resolve the selected reference, never fetch a newer frame for diagnostics.
+        image = self._images.images.resolve(frame.image)
+        if not isinstance(image, bytes):
+            raise TypeError("Current-frame diagnostics require encoded image bytes")
+        image_path = directory / f"{stem}.jpg"
+        image_path.write_bytes(image)
+        metadata = {**frame.model_dump(mode="json"), "question": query,
+                    "response_id": response_id, "image_file": image_path.name,
+                    "system_prompt": _CURRENT_VIEW_PROMPT}
+        metadata_path = directory / f"{stem}.json"
+        metadata_path.write_text(json.dumps(metadata, indent=2))
+        return metadata_path, metadata
 
     def _background_tools(self, participant_id: str) -> ToolSet:
         return _merge_tool_sets(

@@ -666,3 +666,16 @@
   step: steep_timer
   query: Please restart my tea guide.
   expected_tool: workflow__restart
+
+- name: idle-short-spoken-answer
+  query: What is the capital of Portugal?
+  expected_tool: null
+  expected_response_pattern: "(?i)Lisbon"
+  max_response_chars: 140
+- name: idle-focused-camera-question
+  query: How many fingers am I holding up?
+  expected_tool: current_view
+
+- name: idle-inspects-visible-gesture-before-denying-vision
+  query: Is my palm open or closed?
+  expected_tool: current_view

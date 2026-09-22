@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+endpoint: tcp://127.0.0.1:8340
+documents_dir: ../../../agent-samples/tea-making-sample/rag-documents
+models_config: models.json
+embedding_role: embedding
+cache_dir: ../rag-cache
+chunk_size: 700
+overlap: 100
+embedding_dim: 2048
+batch_size: 16
+min_score: 0.3

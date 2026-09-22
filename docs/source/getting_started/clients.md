@@ -68,6 +68,35 @@ from jsDelivr. It has no build step. Open `https://<host>:8080`, accept the
 development certificate warning, leave Token URL blank to use `/token`, and
 connect. The camera preview follows the published track's aspect ratio.
 
+Select **Start Webcam** to use a browser camera. To use an external WebRTC
+camera, enter its WHEP playback endpoint in **Stream URL**, then select
+**Start WebRTC Camera**. Browser audio playback is muted while this camera
+mode is selected; microphone forwarding remains active. Playback resumes when
+you leave WebRTC camera mode. Use the playback endpoint, not a WHIP publishing
+endpoint or a player page. The browser remembers the URL locally.
+
+Camera providers can add a pairing QR or instructions beside the camera controls
+by linking to the client with `?cameraPairingUrl=<encoded-HTTP-or-HTTPS-URL>`.
+The optional **Pair camera** panel embeds that page in a sandboxed frame without
+script permissions. The provider page must allow framing and be reachable from
+the browser; an HTTPS client requires an HTTPS pairing page.
+
+The preview displays **Waiting for stream…** while connecting and retries if
+the publisher is unavailable or the connection is interrupted. Select the
+active source's **Stop** button to cancel. Selecting another source stops the
+previous camera. Stopping reception does not stop the external publisher.
+
+The browser publishes the received video through the existing hub camera
+connection; agents need no changes. When the stream includes audio, it replaces
+the local microphone automatically. The microphone button stops or resumes
+stream audio while this source is selected. Enable microphone capture on the
+publisher; the client does not fall back to the computer microphone when the
+stream has no audio. Stopping the WebRTC camera also stops its microphone.
+The receiver must support browser CORS requests, expose the WHEP `Location`
+response header, and accept complete ICE offers without requiring trickle ICE.
+An HTTPS client page requires an HTTPS playback endpoint. This sample does not
+configure custom authentication headers or TURN credentials for the receiver.
+
 ## Web-XR (xr-render-demo)
 
 The Web-XR page uses same-origin bundles under

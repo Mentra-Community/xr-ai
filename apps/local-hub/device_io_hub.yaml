@@ -1,0 +1,10 @@
+room_name: xr-room
+lk_port_ws: 7880
+lk_port_tcp: 7881
+lk_port_udp: 7882
+enable_web_server: true
+web_server_host: 127.0.0.1
+web_server_port: 8080
+web_server_tls: false
+web_client_dir: ../../client-samples/web
+enable_token_server: false

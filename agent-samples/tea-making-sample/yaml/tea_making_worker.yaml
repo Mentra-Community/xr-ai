@@ -34,3 +34,7 @@ silero_threshold: 0.3
 silence_duration: 1.2
 min_speech: 0.15
 idle_timeout_secs: 0
+
+# Optional local diagnostics: exact foreground VLM images plus prompts and replies.
+# Disabled by default; files remain until manually deleted.
+# debug_frames_dir: ../artifacts/camera-debug

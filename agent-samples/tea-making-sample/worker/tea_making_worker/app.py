@@ -243,6 +243,7 @@ async def run_app(config: WorkerConfig, *, ready_file: Path | None = None) -> No
             video_log=video_log,
             prompt=config.foreground_prompt,
             vlm_timeout_s=config.vlm_timeout_s,
+            debug_frames_dir=config.debug_frames_dir,
         ),
     )
     runtime.register("guidance-voice", GuidanceVoiceAgent())

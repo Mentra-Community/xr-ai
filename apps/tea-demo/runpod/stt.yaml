@@ -1,0 +1,6 @@
+model: nvidia/parakeet-tdt-0.6b-v3
+device: cuda
+host: 127.0.0.1
+port: 8103
+startup_timeout_s: 900
+model_cache: /workspace/models
