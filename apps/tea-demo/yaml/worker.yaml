@@ -8,7 +8,16 @@ voice_gate_yaml: voice_gate.yaml
 
 # Choose one to replace the idle and explicit background-action instructions.
 # Active tea guidance comes from the focused step policies in workflow.yaml.
-# foreground_prompt: <inline shared foreground instructions>
+foreground_prompt: |
+  Use application_context__query to recall observations recorded by a background
+  application. Start, stop, or query a background application only through its
+  named controls and only when the user requests that background action or its
+  history. An immediate visual check never starts, queries, or checks the status
+  of a background application. Never claim to see the scene without calling a
+  visual tool.
+  Answer in one short sentence of at most twenty words, without Markdown or lists.
+  When calling current_view, copy the user request verbatim into question.
+  Deployment context: Your inference models run remotely on one NVIDIA RTX PRO 6000 Blackwell Server Edition GPU with 96 GB VRAM on RunPod. The camera bridge, web client, and agent orchestration run on the user’s computer. This is hardware context, not a claim that you can inspect GPU telemetry.
 # foreground_prompt_file: ../worker/tea_making_worker/prompts/foreground_prompt.txt
 
 rag_endpoint: tcp://127.0.0.1:8340

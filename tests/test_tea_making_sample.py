@@ -191,6 +191,7 @@ def test_web_event_config_defaults_and_validation(
 
 @pytest.mark.asyncio
 async def test_typed_events_are_projected_to_web_topics() -> None:
+    from xr_ai_voice import VOICE_TRANSCRIPT_TOPIC, VoiceTranscript
     captured: list[tuple[WebEvent, str | None]] = []
 
     class Capture(Agent):
@@ -270,6 +271,7 @@ async def test_typed_events_are_projected_to_web_topics() -> None:
             VIDEO_LOG_RECORD_TOPIC,
             VideoLogRecord(timestamp_us=10, record_type="observation", caption="A cup."),
         ),
+        (VOICE_TRANSCRIPT_TOPIC, VoiceTranscript(text="Hello GPU", timestamp_us=11)),
         (PARTICIPANT_JOINED_TOPIC, VoiceParticipantJoined()),
         (PARTICIPANT_LEFT_TOPIC, VoiceParticipantLeft()),
     )
@@ -286,12 +288,14 @@ async def test_typed_events_are_projected_to_web_topics() -> None:
         "background.video-log",
         "background.change-watch",
         "background.transcript",
+        "voice.transcript",
         "participant.lifecycle",
         "participant.lifecycle",
     ]
     assert captured[3][0].payload == {"text": "A hand was raised."}
     assert captured[4][0].payload == {"text": "A person entered the room."}
     assert {participant for _event, participant in captured} == {participant_id}
+    assert captured[-3][0].payload["text"] == "Hello GPU"
     assert captured[-2][0].payload == {"event": "joined"}
     assert captured[-1][0].payload == {"event": "left"}
 

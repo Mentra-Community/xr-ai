@@ -137,6 +137,7 @@ function installAppBrowser(model) {
     ['preview-placeholder', element()],
     ['preview-live-badge', element()],
     ['agent-response-text', element()],
+    ['transcript-text', element()],
     ['error-toast', element()],
     ...['camera-btn', 'webrtc-camera-btn', 'webrtc-camera-url', 'camera-select', 'camera-status'].map(id => [id, element()]),
   ]);
@@ -488,4 +489,18 @@ test('playback mute covers existing and future audio tracks without stopping inp
   backend.setAudioPlaybackMuted(false);
   assert.equal(first.muted, false);
   assert.equal(second.muted, false);
+});
+
+
+test('final speech appears in its own transcript panel without replacing the agent reply', async () => {
+  installAppBrowser({connectionState: 'connected', session: null});
+  await import(`../../client-samples/web/App/app.js?transcript=${Date.now()}`);
+  await globalThis.__appActions.connect();
+  const receive = globalThis.__appHandlers.onDataReceived;
+  receive('agent.response', new TextEncoder().encode('Hello there.'));
+  assert.equal(receive('_capture.voice.stt', new TextEncoder().encode('<b>What GPU?</b>')), true);
+  assert.equal(globalThis.__elements.get('transcript-text').textContent, '<b>What GPU?</b>');
+  assert.equal(globalThis.__elements.get('agent-response-text').textContent, 'Hello there.');
+  for (let i = 0; i < 25; i++) receive('_capture.voice.stt', new TextEncoder().encode(`Utterance ${i}`));
+  assert.equal(globalThis.__appModel.transcripts.length, 20);
 });

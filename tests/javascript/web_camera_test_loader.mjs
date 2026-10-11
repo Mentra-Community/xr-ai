@@ -58,7 +58,7 @@ export async function load(url, context, nextLoad) {
         export const createBaseModel = () => globalThis.__appBaseModel;
         export const renderBase = () => {};
         export const enumerateCameras = async () => {};
-        export const connect = async () => {};
+        export const connect = async (model, handlers) => { globalThis.__appHandlers = handlers; };
         export async function disconnect(model) {
           await model.session?.disconnect();
           model.session = null;

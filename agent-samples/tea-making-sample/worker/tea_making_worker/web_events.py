@@ -7,7 +7,9 @@ from __future__ import annotations
 
 from pydantic import BaseModel, JsonValue
 from xr_ai_runtime import Agent, RuntimeContext, subscribe
-from xr_ai_voice import VoiceParticipantJoined, VoiceParticipantLeft
+from xr_ai_voice import (
+    VOICE_TRANSCRIPT_TOPIC, VoiceTranscript, VoiceParticipantJoined, VoiceParticipantLeft,
+)
 from xr_ai_web_events import WEB_EVENT_TOPIC, WebEvent
 
 from .events import (
@@ -35,6 +37,10 @@ class TeaWebEventsAgent(Agent):
 
     def __init__(self) -> None:
         super().__init__()
+
+    @subscribe(VOICE_TRANSCRIPT_TOPIC)
+    async def speech_transcript(self, record: VoiceTranscript, ctx: RuntimeContext) -> None:
+        await self._publish("voice.transcript", "You said", record, ctx)
 
     @subscribe(FOREGROUND_RECORD_TOPIC)
     async def foreground(

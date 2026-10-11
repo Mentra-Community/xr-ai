@@ -36,6 +36,7 @@ const model = {
   ...createBaseModel(),
   /** @type {string|null} Most recent final agent reply text. */
   agentResponse: null,
+  transcripts: [],
   cameraSource: null,
   cameraPending: false,
 };
@@ -148,6 +149,14 @@ function render() {
     placeholder.style.display = '';
     liveBadge.classList.remove('active');
   }
+
+  const transcriptEl = $('transcript-text');
+  const transcriptText = model.transcripts.join("\n\n") || 'Your speech will appear here…';
+  if (transcriptEl.textContent !== transcriptText) {
+    transcriptEl.textContent = transcriptText;
+    transcriptEl.scrollTop = transcriptEl.scrollHeight;
+  }
+  transcriptEl.classList.toggle('empty', model.transcripts.length === 0);
 
   // Agent response.
   const responseEl = $('agent-response-text');
@@ -307,6 +316,12 @@ function connect()          {
       if (state !== 'connected' && model.cameraSource) void stopCamera();
     },
     onDataReceived(topic, data) {
+      if (topic === '_capture.voice.stt') {
+        const text = new TextDecoder().decode(data).trim();
+        if (text) model.transcripts = [...model.transcripts, text].slice(-20);
+        render();
+        return true;
+      }
       if (AGENT_REPLY_TOPICS.has(topic)) {
         model.agentResponse = new TextDecoder().decode(data);
         render();
