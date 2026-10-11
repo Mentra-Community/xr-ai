@@ -1,0 +1,48 @@
+{
+  "models": {
+    "vlm": {
+      "category": "vlm",
+      "adapter": {
+        "kind": "openai_compat",
+        "model_name": "llm",
+        "reasoning_field": "reasoning_content",
+        "capabilities": {
+          "streaming": true,
+          "vision": true
+        },
+        "default_extras": {
+          "max_tokens": 128,
+          "temperature": 0.0,
+          "chat_template_kwargs": {
+            "enable_thinking": false
+          }
+        }
+      },
+      "endpoint": {
+        "base_url": "http://127.0.0.1:18108",
+        "timeout": 90,
+        "readiness": "health"
+      }
+    },
+    "stt": {
+      "adapter": {
+        "preset": "parakeet_stt"
+      },
+      "endpoint": {
+        "base_url": "http://127.0.0.1:18103",
+        "timeout": 30,
+        "readiness": "health"
+      }
+    },
+    "tts": {
+      "adapter": {
+        "preset": "pocket_tts"
+      },
+      "endpoint": {
+        "base_url": "http://127.0.0.1:18105",
+        "timeout": 30,
+        "readiness": "health"
+      }
+    }
+  }
+}

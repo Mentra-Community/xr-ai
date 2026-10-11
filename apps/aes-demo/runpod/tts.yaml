@@ -1,0 +1,7 @@
+voice: bill_boerst
+language: english
+device: cuda
+host: 127.0.0.1
+port: 8105
+startup_timeout_s: 900
+model_cache: /workspace/models

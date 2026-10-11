@@ -1,0 +1,7 @@
+voice_gate_yaml: ../../../agent-samples/simple-vlm-example/yaml/voice_gate.yaml
+frame_max_age_s: 5.0
+frame_timeout_s: 5.0
+silero_threshold: 0.5
+silence_duration: 0.4
+min_speech: 0.1
+idle_timeout_secs: 0
